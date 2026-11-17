@@ -1,4 +1,4 @@
-## Skinned Mesh Inspector / Mesh Stats
+## Skinned Mesh Inspector
 
 Show triangle, vertex, submesh counts at the bottom of your inspector when looking at a (skinned) mesh
 
