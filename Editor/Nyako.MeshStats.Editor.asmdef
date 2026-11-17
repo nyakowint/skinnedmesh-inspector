@@ -1,0 +1,8 @@
+{
+  "name": "Nyako.MeshStats.Editor",
+  "rootNamespace": "Nyako.MeshStats",
+  "includePlatforms": ["Editor"],
+  "overrideReferences": true,
+  "precompiledReferences": ["0Harmony.dll"],
+  "autoReferenced": false
+}

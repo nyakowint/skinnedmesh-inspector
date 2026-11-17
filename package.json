@@ -1,0 +1,23 @@
+{
+  "name": "cat.nyako.mesh-stats",
+  "version": "0.1.0",
+  "displayName": "Mesh Stats",
+  "description": "Shows triangle, vertex and submesh counts in the Skinned Mesh Renderer inspector.",
+  "unity": "2022.3",
+  "author": {
+    "name": "Nyako",
+    "url": "https://github.com/nyakowint"
+  },
+  "license": "MIT",
+  "licensesUrl": "https://github.com/nyakowint/mesh-stats/blob/main/LICENSE.md",
+  "documentationUrl": "https://github.com/nyakowint/mesh-stats",
+  "changelogUrl": "https://github.com/nyakowint/mesh-stats/releases",
+  "url": "https://github.com/nyakowint/mesh-stats/releases/download/v0.1.0/cat.nyako.mesh-stats-0.1.0.zip",
+  "keywords": ["mesh", "statistics", "skinned mesh renderer", "inspector", "editor"],
+  "vpmDependencies": {
+    "com.vrchat.base": ">=3.7.0 <4.0.0"
+  },
+  "dependencies": {
+    "com.unity.modules.imgui": "1.0.0"
+  }
+}

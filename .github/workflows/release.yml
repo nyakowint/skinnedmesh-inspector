@@ -1,0 +1,104 @@
+name: Build Release
+
+on:
+  push:
+    branches: main
+    paths:
+      - 'package.json'
+  workflow_dispatch:
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Read version and package name directly from package.json
+      - name: Get Version
+        id: version
+        uses: zoexx/github-action-json-file-properties@b9f36ce6ee6fe2680cd3c32b2c62e22eade7e590
+        with:
+          file_path: "package.json"
+          prop_path: "version"
+
+      - name: Get Package Name
+        id: pkg_name
+        uses: zoexx/github-action-json-file-properties@b9f36ce6ee6fe2680cd3c32b2c62e22eade7e590
+        with:
+          file_path: "package.json"
+          prop_path: "name"
+
+      # Tags are v-prefixed to match the download url in package.json
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git ls-remote --tags origin "refs/tags/v${{ steps.version.outputs.value }}" | grep -q .; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set Environment Variables
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          echo "zipFile=${{ steps.pkg_name.outputs.value }}-${{ steps.version.outputs.value }}.zip" >> $GITHUB_ENV
+          echo "unityPackage=${{ steps.pkg_name.outputs.value }}-${{ steps.version.outputs.value }}.unitypackage" >> $GITHUB_ENV
+          echo "tag=v${{ steps.version.outputs.value }}" >> $GITHUB_ENV
+          echo "stagePath=Packages/${{ steps.pkg_name.outputs.value }}" >> $GITHUB_ENV
+
+      - name: Create Package Zip
+        if: steps.check_tag.outputs.exists == 'false'
+        run: zip -r "${{ env.zipFile }}" . -x ".git/*" -x ".github/*" -x ".gitignore"
+
+      # The repo root is the package root; stage it under Packages/<name> so the
+      # .unitypackage imports there instead of the project root
+      - name: Stage UnityPackage Files
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          mkdir -p "${{ env.stagePath }}"
+          git ls-files -z | grep -zv '^\.git' | xargs -0 cp --parents -t "${{ env.stagePath }}"
+          find "${{ env.stagePath }}/" -name \*.meta >> metaList
+
+      - name: Create UnityPackage
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: pCYSl5EDgo/create-unitypackage@v1.2.3
+        with:
+          package-path: ${{ env.unityPackage }}
+          include-files: metaList
+
+      - name: Create Tag
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: rickstaa/action-create-tag@88dbf7ff6fe2405f8e8f6c6fdfd78829bc631f83
+        with:
+          tag: "${{ env.tag }}"
+
+      - name: Make Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        with:
+          files: |
+            ${{ env.zipFile }}
+            ${{ env.unityPackage }}
+            package.json
+          tag_name: ${{ env.tag }}
+
+      # Ping the VPM listing repo to rebuild after a new release.
+      # Requires a PAT with public_repo scope stored as LISTING_DISPATCH_TOKEN secret.
+      - name: Trigger Listing Rebuild
+        if: steps.check_tag.outputs.exists == 'false'
+        continue-on-error: true
+        env:
+          DISPATCH_TOKEN: ${{ secrets.LISTING_DISPATCH_TOKEN }}
+        run: |
+          if [ -n "$DISPATCH_TOKEN" ]; then
+            curl -X POST \
+              -H "Authorization: Bearer $DISPATCH_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/repos/nyakowint/guuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuh/dispatches \
+              -d '{"event_type":"package-release"}'
+          fi
